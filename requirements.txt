@@ -1,0 +1,4 @@
+sqlalchemy
+
+bs4
+html2text

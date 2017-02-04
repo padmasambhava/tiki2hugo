@@ -2,14 +2,15 @@
 
 This is an r+d project to export a tiki wiki site to hugo.
 
-The idea so far, la ti doe is.
 
-- config.yml with tiki site and out paths
-- make conn to db
-- get menu
-- walk menu and
-  - grap page and create in md structure
-  
-I am mad, that is why its only an idea ;-)
+So far...
+
+Its a python script that walks the menu
+and serialise out into sections in hugo..
+
+
+There's a config.yaml file u need to copy
+and set the db connection, and the server url
+
 
 

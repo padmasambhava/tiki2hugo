@@ -169,7 +169,7 @@ class Tiki:
         for idx, line in enumerate(md_raw_text):
             
             if line.startswith("!["): # image at line startswith
-                
+                panic
         
         
         
