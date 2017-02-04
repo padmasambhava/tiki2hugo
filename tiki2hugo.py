@@ -52,8 +52,9 @@ if __name__ == "__main__":
         print t.menu(mmid)
 
     if args.command == "convert":
-        menu = t.menu(mmid)
-        for m in menu:
+        items = t.menu_tree(mmid)
+        for m in items:
+            print m
             t.rip_page(menu)
             
         
