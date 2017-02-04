@@ -10,22 +10,15 @@ import sqlalchemy
 from sqlalchemy.orm import sessionmaker
 
 import bs4
-import html2text
 import codecs
 
+
+import helpers as h
 
 Conf = None
 Engine = None
 Db = None
 
-def write_file(file_path, content):
-	with codecs.open(file_path, "w", "utf-8") as f:
-		f.write(content)
-		f.close()
-			
-def read_file(file_path):
-	with open(file_path, "r") as f:
-		return f.read()
 		
 
 class Tiki:
@@ -60,6 +53,7 @@ class Tiki:
         return npper
         
 
+
     def menu_tree(self, mid):
         
         sql = "select optionId, menuid, type, name, url from tiki_menu_options where menuId=%s" % mid
@@ -71,50 +65,44 @@ class Tiki:
         con_dir = "%s/content" % (self.hugo_dir)
         section_dir = ""
         
-        for r in res:
+        for idx, r in enumerate(res):
             #dic = dict(optionid=r[0], menid=r[1], type=r[2], name=r[3], url=r[4])
             typ = r[2]
-            name = r[3]
+            page_name = r[3]
             url = r[4]
             
             print "----------------------"
-            slug = name.lower().replace(" ", "_")
+            slug = h.slugify(page_name) 
             
             
             
             if typ == "s":
                 # This is a section so page title comes directory
                 section_dir = con_dir + "/" + slug
-                #print dirr
-                if not os.path.exists(section_dir):
-                    os.makedirs(section_dir)
-                filelist = glob.glob(section_dir + "/*.md")
-                for f in filelist:
-                    os.remove(f) 
-                filelist = glob.glob(section_dir + "/*.html")
-                for f in filelist:
-                    os.remove(f)     
-                ## TODO gen index
+                #print dirr#
+                #h.make_clean_dir(section_dir)
+         
             else:
                 
                 # determine is page is wiki page
                 p = urlparse.urlparse(url)
                 qdic = urlparse.parse_qs(p.query)
-                page = qdic.get("page")
-                if page:
+                pagex = qdic.get("page")
+                if pagex:
                     #print "=",  qdic, page
+                    page = pagex[0]
                     u = self.tiki_server
                     u += "tiki-index_raw.php"
-                    u += "?page=" + urllib.quote(page[0])
-                    out_pth = "%s/%s.md" % (section_dir, slug)
-                    ok = self.rip_page(u, out_pth)
+                    u += "?page=" + urllib.quote(page_name)
+                    #out_dir = "%s/%s.md" % (section_dir, slug)
+                    ok = self.rip_page(u, section_dir, page_name)
                 
                 
-                    
+        
             
         return lst
     
-    def get_img(self, imageid):
+    def get_img_db(self, imageid):
         sql = "select imageid, name from tiki_images where imageId=%s" % imageid
         res = self.session.execute(sql)
         for r in res:
@@ -122,71 +110,55 @@ class Tiki:
         return None
         
         
-    
 
-    def rip_page(self, url, out_path):
-        
-        # https://doc.tiki.org/Raw+page+display
-        #
-        # the tiki URL deom menu has spaces, eg `page=This Spaced Title` 
-        # and causes problems
-        # so parse url and query
-        #p = urlparse.urlparse(url)
-        #qdic = urlparse.parse_qs(p.query)
-        #print p, qdic
-        
-        # assemble url again, quoting the query
-       
-        #for k, v in qdic.iteritems():
-        #   u += "%s=%s" % (k, urllib.quote(v[0]))
+    def rip_page(self, url, section_dir, page_name):
         
         print "U=",  url
-        print "out=", out_path
+        print "out=", section_dir
+        
+        slug = h.slugify(page_name)
         #req = "%s%s%s" % (self.tiki_server, p['path'], q)
         #print "file_name=", req, "=", req
         resp = urllib2.urlopen(url)
         rr = resp.read()
         #print rr[0:40]
             
-        raw = unicode(rr, "utf-8")
-        write_file(out_path + ".html", raw)
+        raw_html = unicode(rr, "utf-8")
+        h.write_file("%s/%s.html" % (section_dir, slug), raw_html)
         
-        soup = bs4.BeautifulSoup(raw, "lxml")
+        soup = bs4.BeautifulSoup(raw_html, "lxml")
         #for idx in soup.contents:
         #    print "=====", idx
         results = soup.find_all("img")
         #print results
         images = {}
+        img_dic = {}
         for res in results:
             img_src = res['src']
-            fn = os.path.basename(img_src)
-            print fn, self.tiki_server + img_src
-            if fn.startswith("show_image.php"):
-                uu = urlparse.urlparse(fn)
+            img_file = os.path.basename(img_src)
+            print img_file, self.tiki_server + img_src
+            if img_file.startswith("show_image.php"):
+                uu = urlparse.urlparse(img_file)
                 idic = urlparse.parse_qs(uu.query)
                 idss = idic.get("id")
                 if idss:
                     imageid = idss[0]
-                    print self.get_img(imageid)
-            urllib.urlretrieve(self.tiki_server + img_src, fn)
+                    db_fn =  self.get_img_db(imageid)
+                    if db_fn:
+                        print section_dir, db_fn
+                        ftitle, fslug, fname = h.parts_from_filename(db_fn)
+                        print ftitle, fslug, fname
+                        target_out = section_dir + "/" + fname
+                        if not os.path.exists(target_out):
+                            urllib.urlretrieve(self.tiki_server + img_src, target_out)
+                        images[img_src] = fname
+                        
         #for idx, resu in enumerate(results):
         #raw = unicode(resu) #.decode().encode('utf-8')
         #print "raw=", type(raw), raw[0:40]
         
-    
+        md_text = h.html_to_markdown(raw_html)
+        md_file_path = "%s/%s.md" % (section_dir, slug)
+        print md_file_path
+        h.write_file(md_file_path, md_text)
         
-        
-        #md = html2text.html2text( raw , encoding="utf-8")
-        h = html2text.HTML2Text()
-        h.ignore_links = False
-        h.escape_snob = True
-        h.unicode_snob = True
-        md = h.handle( raw )
-        print md[0:30]
-        
-        
-        
-
-        #print u.query, page
-        write_file(out_path, md)
-		
