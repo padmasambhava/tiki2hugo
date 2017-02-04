@@ -131,8 +131,8 @@ class Tiki:
         #    print "=====", idx
         results = soup.find_all("img")
         #print results
-        images = {}
-        img_dic = {}
+        #images = {}
+        img_lookup = {}
         for res in results:
             img_src = res['src']
             img_file = os.path.basename(img_src)
@@ -145,20 +145,33 @@ class Tiki:
                     imageid = idss[0]
                     db_fn =  self.get_img_db(imageid)
                     if db_fn:
-                        print section_dir, db_fn
+                        #print section_dir, db_fn
                         ftitle, fslug, fname = h.parts_from_filename(db_fn)
-                        print ftitle, fslug, fname
+                        #print ftitle, fslug, fname
                         target_out = section_dir + "/" + fname
                         if not os.path.exists(target_out):
                             urllib.urlretrieve(self.tiki_server + img_src, target_out)
-                        images[img_src] = fname
+                        img_lookup[img_src] = fname
+                        
                         
         #for idx, resu in enumerate(results):
         #raw = unicode(resu) #.decode().encode('utf-8')
         #print "raw=", type(raw), raw[0:40]
         
-        md_text = h.html_to_markdown(raw_html)
-        md_file_path = "%s/%s.md" % (section_dir, slug)
-        print md_file_path
-        h.write_file(md_file_path, md_text)
+        ## get raw markdown and save
+        md_raw_text = h.html_to_markdown(raw_html)
+        f_path = "%s/%s.raw.md" % (section_dir, slug)
+        print f_path
+        h.write_file(f_path, md_raw_text)
+        
+        # process wiki style
+        out_lines = []
+        for idx, line in enumerate(md_raw_text):
+            
+            if line.startswith("!["): # image at line startswith
+                
+        
+        
+        
+        
         

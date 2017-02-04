@@ -22,7 +22,7 @@ def parts_from_filename(file_path):
     # get ext
     file_base = os.path.basename(file_path)
     filep, ext = os.path.splitext(file_base)
-    print "\t", file_path, filep, ext
+    #print "\t", file_path, filep, ext
     slug = slugify(filep)   
     norm_name = slug +  ext.lower()
     
