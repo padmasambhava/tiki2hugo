@@ -2,6 +2,8 @@
 import os
 import sys
 import glob
+import codecs
+
 import urllib
 import urllib2
 import urlparse
@@ -10,7 +12,7 @@ import sqlalchemy
 from sqlalchemy.orm import sessionmaker
 
 import bs4
-import codecs
+from slugify import slugify
 
 
 import helpers as h
@@ -54,35 +56,66 @@ class Tiki:
         
 
 
-    def menu_tree(self, mid):
+    def get_menu_tree(self, mid):
+        """The menu options are by position, we walk same way
+        
+        So this parses a list into a tree 
+        's' type = a section 
+        'o' type = option
+        
+        from db we also get the query of name"""
         
         sql = "select optionId, menuid, type, name, url from tiki_menu_options where menuId=%s" % mid
         sql += " order by position asc"
         res = self.session.execute(sql)
         
-        lst = []
+        rlst = []
         
+        """
         con_dir = "%s/content" % (self.hugo_dir)
         section_dir = ""
+        page_dir = ""
+        section_index = {}
+        """
+        #curr_section = {}
+        mdic = None
         
         for idx, r in enumerate(res):
             #dic = dict(optionid=r[0], menid=r[1], type=r[2], name=r[3], url=r[4])
-            typ = r[2]
-            page_name = r[3]
-            url = r[4]
+            dic = {}
+            dic['typ'] = r[2]
+            dic['page_name'] = r[3]
+            dic['url'] = r[4]
             
+            slug = slugify(page_name) 
+            dic = dict(typ=typ, page_name=r[3], url=r[4])
             print "----------------------"
-            slug = h.slugify(page_name) 
             
             
+            
+            # reverse lookup
             
             if typ == "s":
-                # This is a section so page title comes directory
+                # its a new SECTION    
+                #TODO write prevous index_raw
+                # write_section_index()
+                mdic[slug] = dic
+                mdic['items'] = []
+                curr_section = slug
+                if not slug in section_index:
+                    section_index[slug] = ""
+                    
+                # We in a section so page title comes directory
                 section_dir = con_dir + "/" + slug
+                page_dir = ""
                 #print dirr#
                 #h.make_clean_dir(section_dir)
-         
+                
             else:
+                
+                page_dir = section_dir + "/" + slug
+                
+                #h.make_clean_dir(page_dir)
                 
                 # determine is page is wiki page
                 p = urlparse.urlparse(url)
@@ -95,7 +128,7 @@ class Tiki:
                     u += "tiki-index_raw.php"
                     u += "?page=" + urllib.quote(page_name)
                     #out_dir = "%s/%s.md" % (section_dir, slug)
-                    ok = self.rip_page(u, section_dir, page_name)
+                    ok = self.rip_page(u, page_dir, page_name)
                 
                 
         
@@ -111,12 +144,12 @@ class Tiki:
         
         
 
-    def rip_page(self, url, section_dir, page_name):
+    def rip_page(self, url, page_dir, page_name):
         
         print "U=",  url
-        print "out=", section_dir
+        print "out=", page_dir
         
-        slug = h.slugify(page_name)
+        slug = slugify(page_name)
         #req = "%s%s%s" % (self.tiki_server, p['path'], q)
         #print "file_name=", req, "=", req
         resp = urllib2.urlopen(url)
@@ -124,7 +157,7 @@ class Tiki:
         #print rr[0:40]
             
         raw_html = unicode(rr, "utf-8")
-        h.write_file("%s/%s.html" % (section_dir, slug), raw_html)
+        h.write_file("%s/index.html" % (page_dir), raw_html)
         
         soup = bs4.BeautifulSoup(raw_html, "lxml")
         #for idx in soup.contents:
@@ -135,8 +168,9 @@ class Tiki:
         img_lookup = {}
         for res in results:
             img_src = res['src']
+            img_alt = res['alt']
             img_file = os.path.basename(img_src)
-            print img_file, self.tiki_server + img_src
+            #print img_file, self.tiki_server + img_src
             if img_file.startswith("show_image.php"):
                 uu = urlparse.urlparse(img_file)
                 idic = urlparse.parse_qs(uu.query)
@@ -148,28 +182,36 @@ class Tiki:
                         #print section_dir, db_fn
                         ftitle, fslug, fname = h.parts_from_filename(db_fn)
                         #print ftitle, fslug, fname
-                        target_out = section_dir + "/" + fname
+                        target_out = page_dir + "/" + fname
                         if not os.path.exists(target_out):
                             urllib.urlretrieve(self.tiki_server + img_src, target_out)
-                        img_lookup[img_src] = fname
+                        img_lookup[img_src] = dict(file_name=fname, alt=img_alt)
                         
                         
         #for idx, resu in enumerate(results):
         #raw = unicode(resu) #.decode().encode('utf-8')
-        #print "raw=", type(raw), raw[0:40]
-        
+        #print "IMG Lookup =", img_lookup
+        for img_ki, img_vi in img_lookup.iteritems():
+            print "IMG==", img_ki, img_vi
         ## get raw markdown and save
         md_raw_text = h.html_to_markdown(raw_html)
-        f_path = "%s/%s.raw.md" % (section_dir, slug)
-        print f_path
+        f_path = "%s/%s.raw.md" % (page_dir, slug)
+        #print f_path
         h.write_file(f_path, md_raw_text)
         
+        
+
+        #s = md_raw_text.replace("
         # process wiki style
+        
         out_lines = []
-        for idx, line in enumerate(md_raw_text):
-            
+        for idx, line in enumerate(md_raw_text.split("\n")):
+            #img_tag = "![%s](%s)" % ()
             if line.startswith("!["): # image at line startswith
-                panic
+                print "img_rep", line
+                #find_me = "![%s](%s)" % ) 
+                
+              
         
         
         

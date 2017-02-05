@@ -8,13 +8,7 @@ import codecs
 
 
 ## Helper funcs
-
-def slugify(s):
-    """Makes `A Page Title` into `a_page_title`
-    
-    .. todo:: handle double spaces
-    """
-    return s.strip().lower().replace(" ", "_")
+from slugify import slugify
 
 def parts_from_filename(file_path):
     """ returns "My Image", "my_image" from "My"""
@@ -77,3 +71,10 @@ def delete_files_in_dir(path, ext):
     for f in filelist:
         os.remove(f)   
                     
+                    
+def norman(s):
+    """What is normal ?"""
+    
+    pass
+
+    
