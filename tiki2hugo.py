@@ -41,23 +41,30 @@ if __name__ == "__main__":
         print " No valid conf"
         sys.exit(0)
         
-    t = tiki.Tiki()
-    err = t.init(conf)
-    mmid = t.conf.get("tiki_main_menu_id")
+    tk = tiki.Tiki()
+    err = tk.init(conf)
+    mmid = tk.conf.get("tiki_main_menu_id")
     
     if err:
         panic
     
     if args.command == "test":
-        print t.menu(mmid)
+        print tk.menu(mmid)
 
     if args.command == "convert":
-        items = t.menu_tree(mmid)
-        for m in items:
-            print m
-            t.rip_page(menu)
+        items = tk.get_menu_tree(mmid)
+        #print items
+        for sec_menu in items:
             
-        
+            # s#t.rip_page(menu)
+            #if len(sec_menu['pages']) > 0:
+            tk.rip_section(sec_menu)
+                
+            #print ">", sec_menu['type'], sec_menu['page_name'], sec_menu['url']
+            #for p in sec_menu['pages']:
+            #    print "  >", p['type'], p['page_name'], p['url']
+                    
+                    
         
         
         

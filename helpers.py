@@ -54,11 +54,14 @@ def read_file(file_path):
 		return f.read()
     
     
-def make_clean_dir(path):
+def make_clean_dir(path, images=False):
     """Created a directory at x, and deletes files within if exist"""
     if not os.path.exists(path):
         os.makedirs(path)
-    for ext in ["md", "html", "jpg", "jpeg", "png"]:
+    exts = ["md", "html", "txt"]
+    if images:
+        exts.extend(["jpg", "jpeg", "png"])
+    for ext in exts:
         delete_files_in_dir(path, ext)
 
 def delete_files_in_dir(path, ext):
@@ -66,10 +69,7 @@ def delete_files_in_dir(path, ext):
     filelist = glob.glob(path + "/*.%s" % ext)
     for f in filelist:
         os.remove(f) 
-    return    
-    filelist = glob.glob(section_dir + "/*.html")
-    for f in filelist:
-        os.remove(f)   
+
                     
                     
 def norman(s):

@@ -3,6 +3,7 @@ import os
 import sys
 import glob
 import codecs
+import re
 
 import urllib
 import urllib2
@@ -69,54 +70,35 @@ class Tiki:
         sql += " order by position asc"
         res = self.session.execute(sql)
         
-        rlst = []
         
-        """
         con_dir = "%s/content" % (self.hugo_dir)
-        section_dir = ""
-        page_dir = ""
-        section_index = {}
-        """
-        #curr_section = {}
-        mdic = None
-        
+        sdic = None
+        lst = []
         for idx, r in enumerate(res):
-            #dic = dict(optionid=r[0], menid=r[1], type=r[2], name=r[3], url=r[4])
+
             dic = {}
-            dic['typ'] = r[2]
+            dic['type'] = r[2]
             dic['page_name'] = r[3]
             dic['url'] = r[4]
-            
-            slug = slugify(page_name) 
-            dic = dict(typ=typ, page_name=r[3], url=r[4])
-            print "----------------------"
-            
-            
-            
-            # reverse lookup
-            
-            if typ == "s":
+            dic['slug'] = slugify(dic['page_name']) 
+ 
+            if  dic['type'] == "s":
                 # its a new SECTION    
-                #TODO write prevous index_raw
-                # write_section_index()
-                mdic[slug] = dic
-                mdic['items'] = []
-                curr_section = slug
-                if not slug in section_index:
-                    section_index[slug] = ""
-                    
+                sdic = dict(dic)
+                sdic['pages'] = []
                 # We in a section so page title comes directory
-                section_dir = con_dir + "/" + slug
-                page_dir = ""
-                #print dirr#
-                #h.make_clean_dir(section_dir)
+                sdic['section_dir'] = con_dir + "/" + sdic['slug']
+                
+                lst.append(sdic)
                 
             else:
                 
-                page_dir = section_dir + "/" + slug
+                dic['page_dir'] = sdic['section_dir'] + "/" + dic['slug']
+                
+                sdic['pages'].append(dic)
                 
                 #h.make_clean_dir(page_dir)
-                
+                """
                 # determine is page is wiki page
                 p = urlparse.urlparse(url)
                 qdic = urlparse.parse_qs(p.query)
@@ -130,7 +112,7 @@ class Tiki:
                     #out_dir = "%s/%s.md" % (section_dir, slug)
                     ok = self.rip_page(u, page_dir, page_name)
                 
-                
+                """
         
             
         return lst
@@ -141,23 +123,51 @@ class Tiki:
         for r in res:
             return r[1]
         return None
-        
-        
+    
+    def clean_url(self, url):
+        p = urlparse.urlparse(url)
+        qdic = urlparse.parse_qs(p.query)
+        pagex = qdic.get("page")
+        if pagex:
+            #print "=",  qdic, page
+            page = pagex[0]
+            u = self.tiki_server
+            u += "tiki-index_raw.php"
+            u += "?page=" + urllib.quote(page)
+            #out_dir = "%s/%s.md" % (section_dir, slug)
+            return u
+        return url
+        #ok = self.rip_page(u, page_dir, page_name)
+                    
+    def rip_section(self, sec_menu):
+        print "=========== RIP > %s" % sec_menu['page_name'], sec_menu['section_dir']
+        h.make_clean_dir(sec_menu['section_dir'])
+        for p in sec_menu['pages']:
+            print "  >", p['type'], p['page_name'], p['url']
+            self.rip_page(p)
 
-    def rip_page(self, url, page_dir, page_name):
+    def rip_page(self, pdic): #url, page_dir, page_name):
+        print "------------page---------------"
+        h.make_clean_dir(pdic['page_dir'])
+        url = pdic['url']
+        page_dir = pdic['page_dir']
+        slug = pdic['slug']
+
+        print "U=",  slug, page_dir, url
+        #print "out=", page_dir
         
-        print "U=",  url
-        print "out=", page_dir
-        
-        slug = slugify(page_name)
+        #slug = slugify(page_name)
         #req = "%s%s%s" % (self.tiki_server, p['path'], q)
         #print "file_name=", req, "=", req
-        resp = urllib2.urlopen(url)
+        print url
+        print self.clean_url(url)
+        resp = urllib2.urlopen(self.clean_url(url))
         rr = resp.read()
         #print rr[0:40]
             
         raw_html = unicode(rr, "utf-8")
-        h.write_file("%s/index.html" % (page_dir), raw_html)
+        h.write_file("%s/_source.txt" % (page_dir), raw_html)
+        
         
         soup = bs4.BeautifulSoup(raw_html, "lxml")
         #for idx in soup.contents:
@@ -187,20 +197,38 @@ class Tiki:
                             urllib.urlretrieve(self.tiki_server + img_src, target_out)
                         img_lookup[img_src] = dict(file_name=fname, alt=img_alt)
                         
-                        
+        
+
+        ## get raw markdown and save
+        md_raw_text = h.html_to_markdown(raw_html)
+        f_path = "%s/_raw.md" % (page_dir)
+        #print f_path
+        h.write_file(f_path, md_raw_text)
+        
+        
+        """
+        regex = r"\!\[.*\]\(.*\)"
+
+        test_str = "some text and ![Image label](show_image.php?fii=909) here"
+
+        matches = re.finditer(regex, test_str)
+
+        for matchNum, match in enumerate(matches):
+            matchNum = matchNum + 1
+            
+            print ("Match {matchNum} was found at {start}-{end}: {match}".format(matchNum = matchNum, start = match.start(), end = match.end(), match = match.group()))
+            
+            for groupNum in range(0, len(match.groups())):
+                groupNum = groupNum + 1
+                
+                print ("Group {groupNum} found at {start}-{end}: {group}".format(groupNum = groupNum, start = match.start(groupNum), end = match.end(groupNum), group = match.group(groupNum)))
+        """
+                     
         #for idx, resu in enumerate(results):
         #raw = unicode(resu) #.decode().encode('utf-8')
         #print "IMG Lookup =", img_lookup
         for img_ki, img_vi in img_lookup.iteritems():
             print "IMG==", img_ki, img_vi
-        ## get raw markdown and save
-        md_raw_text = h.html_to_markdown(raw_html)
-        f_path = "%s/%s.raw.md" % (page_dir, slug)
-        #print f_path
-        h.write_file(f_path, md_raw_text)
-        
-        
-
         #s = md_raw_text.replace("
         # process wiki style
         
