@@ -40,6 +40,7 @@ class Tiki:
         self.conf = conf
         self.hugo_dir = self.conf.get("hugo_dir")
         self.tiki_server = self.conf.get("tiki_server")
+        self.tiki_main_menu_id = self.conf.get("tiki_main_menu_id")
         
         db_conn_str = self.conf.get('tiki_db')
         #print "> DB.init()", db_conn_str
@@ -57,7 +58,7 @@ class Tiki:
         
 
 
-    def get_menu_tree(self, mid):
+    def get_menu(self, menuId=None):
         """The menu options are by position, we walk same way
         
         So this parses a list into a tree 
@@ -66,7 +67,10 @@ class Tiki:
         
         from db we also get the query of name"""
         
-        sql = "select optionId, menuid, type, name, url from tiki_menu_options where menuId=%s" % mid
+        if menuId == None:
+            menuId = self.tiki_main_menu_id
+        
+        sql = "select optionId, menuid, type, name, url from tiki_menu_options where menuId=%s" % menuId
         sql += " order by position asc"
         res = self.session.execute(sql)
         
@@ -96,39 +100,32 @@ class Tiki:
                 dic['page_dir'] = sdic['section_dir'] + "/" + dic['slug']
                 
                 sdic['pages'].append(dic)
-                
-                #h.make_clean_dir(page_dir)
-                """
-                # determine is page is wiki page
-                p = urlparse.urlparse(url)
-                qdic = urlparse.parse_qs(p.query)
-                pagex = qdic.get("page")
-                if pagex:
-                    #print "=",  qdic, page
-                    page = pagex[0]
-                    u = self.tiki_server
-                    u += "tiki-index_raw.php"
-                    u += "?page=" + urllib.quote(page_name)
-                    #out_dir = "%s/%s.md" % (section_dir, slug)
-                    ok = self.rip_page(u, page_dir, page_name)
-                
-                """
-        
-            
+
         return lst
     
-    def write_menu(self, menu):
-        
+    def write_menu(self):
+        main_menu = self.get_menu()
         lst = []
-        for idx, rec in enumerate(menu):
-            m = dict(name=rec['page_name'], url=rec['slug'], weight=idx)
-            lst.append(m)
+        for midx, mrec in enumerate(main_menu):
+            mm = dict(name = mrec['page_name'], 
+                     identifier = mrec['slug'],
+                     url="/%s/" % mrec['slug'], 
+                     weight = midx+1)
+            lst.append(mm)
+            ## Now we add child submenus as hugo parent
+            for cidx, crec in enumerate(mrec['pages']):
+                cm = dict(name = crec['page_name'], 
+                     parent = mrec['slug'],     
+                     identifier = mrec['slug'] + "|" + crec['slug'],
+                     url="/%s/%s/" % (mrec['slug'], crec['slug']), 
+                     weight = cidx+1)
+                lst.append(cm)
         
         mdic = {}
         mdic['menu'] = {"main": lst}
         
         
-        ys = yaml.dumps(mdic)
+        ys = h.to_yaml(mdic)
         h.write_file(self.hugo_dir + "/_menu.yaml", ys)
     
     def get_img_db(self, imageid):

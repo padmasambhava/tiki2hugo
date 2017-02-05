@@ -47,7 +47,7 @@ if __name__ == "__main__":
         
     tk = tiki.Tiki()
     err = tk.init(conf)
-    mmid = tk.conf.get("tiki_main_menu_id")
+    #mmid = tk.conf.get("tiki_main_menu_id")
     
     if err:
         panic
@@ -56,7 +56,7 @@ if __name__ == "__main__":
         print tk.menu(mmid)
 
     if args.command == "menu":
-        items = tk.write_menu(mmid)
+        items = tk.write_menu()
         print items
         
     if args.command == "convert":

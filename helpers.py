@@ -1,7 +1,7 @@
 
 import os
 import glob
-
+import yaml
 
 import html2text
 import codecs
@@ -72,9 +72,7 @@ def delete_files_in_dir(path, ext):
 
                     
                     
-def norman(s):
-    """What is normal ?"""
-    
-    pass
+def to_yaml(stuff):
+    return yaml.dump(stuff, indent=4, default_flow_style=False)
 
     
