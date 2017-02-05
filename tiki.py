@@ -153,14 +153,14 @@ class Tiki:
         page_dir = pdic['page_dir']
         slug = pdic['slug']
 
-        print "U=",  slug, page_dir, url
+        print "U=",  slug, page_dir
         #print "out=", page_dir
         
         #slug = slugify(page_name)
         #req = "%s%s%s" % (self.tiki_server, p['path'], q)
         #print "file_name=", req, "=", req
-        print url
-        print self.clean_url(url)
+        print "  raw=", url
+        print "  clean=", self.clean_url(url)
         resp = urllib2.urlopen(self.clean_url(url))
         rr = resp.read()
         #print rr[0:40]
@@ -200,45 +200,47 @@ class Tiki:
         
 
         ## get raw markdown and save
-        md_raw_text = h.html_to_markdown(raw_html)
+        md_text = h.html_to_markdown(raw_html)
         f_path = "%s/_raw.md" % (page_dir)
         #print f_path
-        h.write_file(f_path, md_raw_text)
+        h.write_file(f_path, md_text)
+        
+        ## images we found
+        for img_ki, img_vi in img_lookup.iteritems():
+            print "  IMG==", img_ki, img_vi
         
         
-        """
+        
         regex = r"\!\[.*\]\(.*\)"
 
-        test_str = "some text and ![Image label](show_image.php?fii=909) here"
+        #test_str = "some text and ![Image label](show_image.php?fii=909) here"
 
-        matches = re.finditer(regex, test_str)
+        matches = re.finditer(regex, md_text)
 
         for matchNum, match in enumerate(matches):
             matchNum = matchNum + 1
             
-            print ("Match {matchNum} was found at {start}-{end}: {match}".format(matchNum = matchNum, start = match.start(), end = match.end(), match = match.group()))
+            print ("m:{matchNum} at {start}-{end}: {match}".format(matchNum = matchNum, start = match.start(), end = match.end(), match = match.group()))
             
             for groupNum in range(0, len(match.groups())):
                 groupNum = groupNum + 1
                 
                 print ("Group {groupNum} found at {start}-{end}: {group}".format(groupNum = groupNum, start = match.start(groupNum), end = match.end(groupNum), group = match.group(groupNum)))
-        """
+       
                      
         #for idx, resu in enumerate(results):
         #raw = unicode(resu) #.decode().encode('utf-8')
         #print "IMG Lookup =", img_lookup
-        for img_ki, img_vi in img_lookup.iteritems():
-            print "IMG==", img_ki, img_vi
         #s = md_raw_text.replace("
         # process wiki style
-        
+        """
         out_lines = []
         for idx, line in enumerate(md_raw_text.split("\n")):
             #img_tag = "![%s](%s)" % ()
             if line.startswith("!["): # image at line startswith
                 print "img_rep", line
                 #find_me = "![%s](%s)" % ) 
-                
+        """        
               
         
         
