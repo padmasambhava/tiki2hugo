@@ -117,6 +117,20 @@ class Tiki:
             
         return lst
     
+    def write_menu(self, menu):
+        
+        lst = []
+        for idx, rec in enumerate(menu):
+            m = dict(name=rec['page_name'], url=rec['slug'], weight=idx)
+            lst.append(m)
+        
+        mdic = {}
+        mdic['menu'] = {"main": lst}
+        
+        
+        ys = yaml.dumps(mdic)
+        h.write_file(self.hugo_dir + "/_menu.yaml", ys)
+    
     def get_img_db(self, imageid):
         sql = "select imageid, name from tiki_images where imageId=%s" % imageid
         res = self.session.execute(sql)
@@ -146,6 +160,16 @@ class Tiki:
             print "  >", p['type'], p['page_name'], p['url']
             self.rip_page(p)
 
+    def parse_md_img(self, md):
+        #rint "===", md 
+        # the amateur way
+        # ![Organic Garden](../wiki_xtras/ftp_images/Organic-garden.jpg)
+        s = md[2:-1]
+        parts = s.split("](")
+        #print s, parts
+        return parts[1], parts[0] 
+
+
     def rip_page(self, pdic): #url, page_dir, page_name):
         print "------------page---------------"
         h.make_clean_dir(pdic['page_dir'])
@@ -159,6 +183,11 @@ class Tiki:
         #slug = slugify(page_name)
         #req = "%s%s%s" % (self.tiki_server, p['path'], q)
         #print "file_name=", req, "=", req
+        
+        if "tiki-browse_gallery.php" in url:
+            print "  IGNORE"
+            return
+        
         print "  raw=", url
         print "  clean=", self.clean_url(url)
         resp = urllib2.urlopen(self.clean_url(url))
@@ -210,24 +239,47 @@ class Tiki:
             print "  IMG==", img_ki, img_vi
         
         
+
         
         regex = r"\!\[.*\]\(.*\)"
 
         #test_str = "some text and ![Image label](show_image.php?fii=909) here"
 
         matches = re.finditer(regex, md_text)
+        
+        out = ""
+        start = 0
 
         for matchNum, match in enumerate(matches):
             matchNum = matchNum + 1
             
             print ("m:{matchNum} at {start}-{end}: {match}".format(matchNum = matchNum, start = match.start(), end = match.end(), match = match.group()))
             
+            out += md_text[start:match.start()]
+            #out += md_text[match.start():match.end()]
+            snip = md_text[match.start():match.end()]
+            mimg_url, mimg_alt = self.parse_md_img(snip)
+            #
+            if mimg_url in img_lookup:
+                im = img_lookup[mimg_url]
+                print "YES", im
+                out += "![%s](%s)" % (im['file_name'], im['file_name'])
+            else:
+                out += snip
+            start = match.end()
+            
+            
             for groupNum in range(0, len(match.groups())):
                 groupNum = groupNum + 1
                 
                 print ("Group {groupNum} found at {start}-{end}: {group}".format(groupNum = groupNum, start = match.start(groupNum), end = match.end(groupNum), group = match.group(groupNum)))
        
-                     
+        out += md_text[start:]
+       
+        f_path = "%s/index.md" % (page_dir)
+        #print f_path
+        h.write_file(f_path, out)
+              
         #for idx, resu in enumerate(results):
         #raw = unicode(resu) #.decode().encode('utf-8')
         #print "IMG Lookup =", img_lookup

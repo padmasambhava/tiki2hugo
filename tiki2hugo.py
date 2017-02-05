@@ -18,13 +18,17 @@ sub_parsers = parser.add_subparsers(help="commands", dest="command")
 ## test command
 sp_setup = sub_parsers.add_parser("test", help="Check setup")
 
+##  menu
+sp_menu = sub_parsers.add_parser("menu", help="Menu stuff")
+sp_menu.add_argument("-w", dest="write", action="store_false")
+
 ## convert command
 sp_convert = sub_parsers.add_parser("convert", help="Convert stuff")
 
 ## Add some standard items 
-for p in [sp_setup, sp_convert]:
+for p in [sp_setup, sp_convert, sp_menu]:
     p.add_argument("--debug", dest="debug", action="store_false", help="debug")
-    p.add_argument("config_file", type=str, help="File to convert")
+    p.add_argument("-c", dest="config_file", type=str, help="Convertion config", default="./config.yaml")
     
 
 if __name__ == "__main__":
@@ -51,8 +55,12 @@ if __name__ == "__main__":
     if args.command == "test":
         print tk.menu(mmid)
 
+    if args.command == "menu":
+        items = tk.write_menu(mmid)
+        print items
+        
     if args.command == "convert":
-        items = tk.get_menu_tree(mmid)
+        items = tk.get_menu(mmid)
         #print items
         for sec_menu in items:
             
