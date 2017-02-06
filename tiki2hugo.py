@@ -60,7 +60,7 @@ if __name__ == "__main__":
         print items
         
     if args.command == "convert":
-        items = tk.get_menu(mmid)
+        items = tk.get_menu()
         #print items
         for sec_menu in items:
             

@@ -82,9 +82,10 @@ class Tiki:
 
             dic = {}
             dic['type'] = r[2]
-            dic['page_name'] = r[3]
+            dic['name'] = r[3]
             dic['url'] = r[4]
-            dic['slug'] = slugify(dic['page_name']) 
+            dic['slug'] = slugify(dic['name']) 
+            
  
             if  dic['type'] == "s":
                 # its a new SECTION    
@@ -151,10 +152,13 @@ class Tiki:
         #ok = self.rip_page(u, page_dir, page_name)
                     
     def rip_section(self, sec_menu):
-        print "=========== RIP > %s" % sec_menu['page_name'], sec_menu['section_dir']
+        print "=========== RIP > %s" % sec_menu['name'], sec_menu['section_dir']
         h.make_clean_dir(sec_menu['section_dir'])
+        
+        ## TODO Write index here
+        
         for p in sec_menu['pages']:
-            print "  >", p['type'], p['page_name'], p['url']
+            print "  >", p['type'], p['name'], p['url']
             self.rip_page(p)
 
     def parse_md_img(self, md):
@@ -168,41 +172,51 @@ class Tiki:
 
 
     def rip_page(self, pdic): #url, page_dir, page_name):
+        
         print "------------page---------------"
+        # check dir exists and nuke files within
         h.make_clean_dir(pdic['page_dir'])
+        
+        # make some vars for convience
         url = pdic['url']
         page_dir = pdic['page_dir']
+        title = pdic['name'].title()
         slug = pdic['slug']
 
-        print "U=",  slug, page_dir
-        #print "out=", page_dir
+        print "U=",  slug, page_dir, url
+        #print "  raw=", url
+        #print "  clean=", self.clean_url(url)
         
-        #slug = slugify(page_name)
-        #req = "%s%s%s" % (self.tiki_server, p['path'], q)
-        #print "file_name=", req, "=", req
         
+        # IGNORES. .for now
+        ## TODO detect and clean urls
         if "tiki-browse_gallery.php" in url:
-            print "  IGNORE"
+            print "  IGNORE", url
             return
         
-        print "  raw=", url
-        print "  clean=", self.clean_url(url)
+        
+        ## Get remote ?page= with cleaned url
         resp = urllib2.urlopen(self.clean_url(url))
-        rr = resp.read()
-        #print rr[0:40]
-            
-        raw_html = unicode(rr, "utf-8")
+        
+        ## the raw html is here and save to file and in utf8
+        raw_stuff = resp.read()
+        raw_html = unicode(raw_stuff, "utf-8")
         h.write_file("%s/_source.txt" % (page_dir), raw_html)
         
         
+        ## === Download IMAGES ===
+        # Find images in page, and download
+        # Using beautiful soup to discover, maybe do on markdown
+        img_lookup = {}
+        
+        # We use beautiful soup to get all the images in html
         soup = bs4.BeautifulSoup(raw_html, "lxml")
-        #for idx in soup.contents:
-        #    print "=====", idx
-        results = soup.find_all("img")
+        image_nodes = soup.find_all("img")
+        
         #print results
         #images = {}
-        img_lookup = {}
-        for res in results:
+        
+        for res in image_nodes:
             img_src = res['src']
             img_alt = res['alt']
             img_file = os.path.basename(img_src)
@@ -223,46 +237,47 @@ class Tiki:
                             urllib.urlretrieve(self.tiki_server + img_src, target_out)
                         img_lookup[img_src] = dict(file_name=fname, alt=img_alt)
                         
+        ## images we found
+        if False:
+            for img_ki, img_vi in img_lookup.iteritems():
+                print "  IMG==", img_ki, img_vi
         
 
-        ## get raw markdown and save
+        ## Convert html to markdown and save in _raw.md
         md_text = h.html_to_markdown(raw_html)
         f_path = "%s/_raw.md" % (page_dir)
         #print f_path
         h.write_file(f_path, md_text)
         
-        ## images we found
-        for img_ki, img_vi in img_lookup.iteritems():
-            print "  IMG==", img_ki, img_vi
+                
         
         
 
+        ## Rewrite the image tags in markdown
         
-        regex = r"\!\[.*\]\(.*\)"
-
-        #test_str = "some text and ![Image label](show_image.php?fii=909) here"
+        regex = r"\!\[.*\]\(.*\)" # looking for ![Foo Bar](../someiamage.php?id = 21) in txt
 
         matches = re.finditer(regex, md_text)
         
-        out = ""
+        after_image_rewrite = ""
         start = 0
 
         for matchNum, match in enumerate(matches):
             matchNum = matchNum + 1
             
-            print ("m:{matchNum} at {start}-{end}: {match}".format(matchNum = matchNum, start = match.start(), end = match.end(), match = match.group()))
+            #print ("m:{matchNum} at {start}-{end}: {match}".format(matchNum = matchNum, start = match.start(), end = match.end(), match = match.group()))
             
-            out += md_text[start:match.start()]
+            after_image_rewrite += md_text[start:match.start()]
             #out += md_text[match.start():match.end()]
             snip = md_text[match.start():match.end()]
             mimg_url, mimg_alt = self.parse_md_img(snip)
             #
             if mimg_url in img_lookup:
                 im = img_lookup[mimg_url]
-                print "YES", im
-                out += "![%s](%s)" % (im['file_name'], im['file_name'])
+                #print "   rewite img", im
+                after_image_rewrite += "![%s](%s)" % (im['file_name'], im['file_name'])
             else:
-                out += snip
+                after_image_rewrite += snip
             start = match.end()
             
             
@@ -271,11 +286,67 @@ class Tiki:
                 
                 print ("Group {groupNum} found at {start}-{end}: {group}".format(groupNum = groupNum, start = match.start(groupNum), end = match.end(groupNum), group = match.group(groupNum)))
        
-        out += md_text[start:]
+        after_image_rewrite += md_text[start:]
+        
+        # Phew now images have been rewitter,,
+        # we start again with out raw_stuff for hugo
+        
+        # cleanup tiki backlink header = first line
+        #md_stuff = []
+        after_title = []
+        
+        # split up md and replace first tiki md lines..
+        tlines = after_image_rewrite.split("\n")
+        
+        # and replace title at top cos it's daft
+        start_idx = -1 # start line
+        if tline[0].startswith("# "): # # we expect a title and backlings.url
+            start_idx = 0
+            
+        # check if next line is blank also cos overflow
+        if tlines[1] != "":
+            start_idx = 1
+                    
+                    md_stuff = ["# %s" % title, "\n"]
+                    md_stuff.extend(tlines[start_line:])
+                    after_title = "\n".join(md_stuff)
+        #for lidx, line in enumerate(tlines):
+            ## tiki firs tlines might be faft..
+            # so we walk until first lblan line  
+            
+            # so first line is warpeed markdown.. eg
+            print "   lidx=%s" % lidx, line
+        #    if lidx == 0:
+                start_line = 0 # start line
+                
+                # and itst starts with a title # = smalees liek a title
+                # detect heading
+                if line[0].startswith("# "): #  != "# ":
+                    start_line = 0
+                    
+                    # check if next line is blank also cos overflow
+                    if tlines[1] != "":
+                        ss
+                        start_line = 1
+                    
+                    md_stuff = ["# %s" % title, "\n"]
+                    md_stuff.extend(tlines[start_line:])
+                    after_title = "\n".join(md_stuff)
+                    
+                    break
+            else:
+                shit_happens()
+            #else:
+                #print "append", line
+                #md_stuff.append(line)
+        after_title = "\n".join(md_stuff)
+        frontmatter = {}
+        
+        
        
         f_path = "%s/index.md" % (page_dir)
         #print f_path
-        h.write_file(f_path, out)
+        h.write_file(f_path, after_title)
               
         #for idx, resu in enumerate(results):
         #raw = unicode(resu) #.decode().encode('utf-8')
