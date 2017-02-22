@@ -145,7 +145,7 @@ class Tiki:
         pagex = qdic.get("page")
         if pagex:
             #print "=",  qdic, page
-            page = pagex[0]
+            page = pagex[0].strip()
             u = self.tiki_server
             u += "tiki-index_raw.php"
             u += "?page=" + urllib.quote(page)
