@@ -6,7 +6,7 @@ import sys
 import argparse
 import yaml
 
-import tiki
+from t2h import tiki
 
 
 ## Main Parser

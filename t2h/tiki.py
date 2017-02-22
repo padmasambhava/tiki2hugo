@@ -22,7 +22,11 @@ Conf = None
 Engine = None
 Db = None
 
-		
+class PMeta:
+    def __init__(self, url=None, page=None):
+        self.url = url
+        self.page = page
+
 
 class Tiki:
     
@@ -133,6 +137,11 @@ class Tiki:
         h.write_file(self.hugo_dir + "/_menu.yaml", ys)
     
     def get_img_db(self, imageid):
+        """Get info about image from tiki db,
+          only name so far, but might be dims later
+
+        :return: the name as str
+        """
         sql = "select imageid, name from tiki_images where imageId=%s" % imageid
         res = self.session.execute(sql)
         for r in res:
@@ -155,14 +164,36 @@ class Tiki:
         #ok = self.rip_page(u, page_dir, page_name)
                     
     def rip_section(self, sec_menu):
-        print "=========== RIP > %s" % sec_menu['name'], sec_menu['section_dir']
+        """Rips out a section meniw" annd all pages"""
+        print "== SECTION = > %s" % sec_menu['name'], sec_menu['section_dir']
         h.make_clean_dir(sec_menu['section_dir'])
         
-        ## TODO Write index here
-        
+        ## Rip out the sections
+        sec_idx = []
         for p in sec_menu['pages']:
+            ## rip page
             print "  >", p['type'], p['name'], p['url']
-            self.rip_page(p)
+            err = self.rip_page(p)
+            if not err :
+                sec_idx.append(p)
+        if len(sec_idx) > 0:
+
+            print "YES", sec_idx
+
+        ## make index
+        sec_md = "# Heading"
+
+        idx_lst = []
+        for ix in sec_idx:
+            lnk = "- %s" % (ix)
+            idx_lst.append(ix)
+        lltt = "<li>%</li>"
+        idx_lst.append()
+
+        for ll in idx_lst:
+            idx_lst = "<li>%s".join(idx_lst)
+        fname = sec_menu['section_dir'] + "index.md"
+        h.write_file(fname, md_idx)
 
     def parse_md_img(self, md):
         #rint "===", md 
@@ -221,7 +252,7 @@ class Tiki:
         
         for res in image_nodes:
             img_src = res['src']
-            img_alt = res['alt']
+            img_alt = res.get('alt')
             img_file = os.path.basename(img_src)
             #print img_file, self.tiki_server + img_src
             
@@ -324,7 +355,7 @@ class Tiki:
         #print f_path
         h.write_file(f_path, after_title)
               
-      
+        return None
               
         
         
