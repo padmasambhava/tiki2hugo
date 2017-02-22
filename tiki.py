@@ -253,12 +253,10 @@ class Tiki:
 
         ## Convert html to markdown and save in _raw.md_raw
         md_text = h.html_to_markdown(raw_html)
-        f_path = "%s.md_raw" % (page_dir)
+        f_path = "%s/_md.raw" % (page_dir)
+        h.write_file("%s/_md.raw" % (page_dir), md_text)
         #print f_path
-        h.write_file(f_path, md_text)
-        
-                
-        
+        #.write_file(f_path, md_text)
         
 
         ## Rewrite the image tags in markdown
@@ -296,62 +294,32 @@ class Tiki:
        
         after_image_rewrite += md_text[start:]
         
-        # Phew now images have been rewitter,,
+        # Phew now images have been rewitten,
         # we start again with out raw_stuff for hugo
         
-        # cleanup tiki backlink header = first line
-        #md_stuff = []
-        after_title = []
-        
+        # cleanup tiki backlink header = first line       
         # split up md and replace first tiki md lines..
         tlines = after_image_rewrite.split("\n")
         
-        # and replace title at top cos it's daft
-        start_idx = -1 # start line
-        if tline[0].startswith("# "): # # we expect a title and backlings.url
-            start_idx = 0
-            
-        # check if next line is blank also cos overflow
-        if tlines[1] != "":
-            start_idx = 1
-                    
-            md_stuff = ["# %s" % title, "\n"]
-            md_stuff.extend(tlines[start_line:])
-            after_title = "\n".join(md_stuff)
-            #for lidx, line in enumerate(tlines):
-            ## tiki firs tlines might be faft..
-            # so we walk until first lblan line  
-            
-            # so first line is warpeed markdown.. eg
-            print "   lidx=%s" % lidx, line
-            if lidx == 0:
-                start_line = 0 # start line
+        cleaned_header = []
+        if tlines[0].startswith("# "):
+            if tlines[1] != "": 
+                print "tlines=", tlines[0:3]
                 
-                # and itst starts with a title # = smalees liek a title
-                # detect heading
-                if line[0].startswith("# "): #  != "# ":
-                    start_line = 0
-                    
-                    # check if next line is blank also cos overflow
-                    if tlines[1] != "":
-                        ss
-                        start_line = 1
-                    
-                    md_stuff = ["# %s" % title, "\n"]
-                    md_stuff.extend(tlines[start_line:])
-                    after_title = "\n".join(md_stuff)
-                    
-                    break
+                #start_idx = 0
+                # replace double header
+                cleaned_header.append("# %s" % title)
+                cleaned_header.extend(tlines[2:])
+                
             else:
-                shit_happens()
-            #else:
-                #print "append", line
-                #md_stuff.append(line)
-        after_title = "\n".join(md_stuff)
-        frontmatter = {}
+                cleaned_header.append("# %s" % title)
+                cleaned_header.extend(tlines[1:])
+        else:
+            print tlines[0:10]
+            paniccc
+            
         
-        
-       
+        after_title = "\n".join(cleaned_header)
         f_path = "%s/index.md" % (page_dir)
         #print f_path
         h.write_file(f_path, after_title)
