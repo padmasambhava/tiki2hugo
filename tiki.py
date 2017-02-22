@@ -68,16 +68,19 @@ class Tiki:
         from db we also get the query of name"""
         
         if menuId == None:
+            # unless given specific menu, use the main menu from config
             menuId = self.tiki_main_menu_id
-        
-        sql = "select optionId, menuid, type, name, url from tiki_menu_options where menuId=%s" % menuId
-        sql += " order by position asc"
-        res = self.session.execute(sql)
-        
-        
+
         con_dir = "%s/content" % (self.hugo_dir)
         sdic = None
         lst = []
+        
+        sql = "  select optionId, menuid, type, name, url "
+        sql += " from tiki_menu_options  "
+        sql += " where menuId=%s" % menuId
+        sql += " order by position asc"
+        res = self.session.execute(sql)
+        
         for idx, r in enumerate(res):
 
             dic = {}
@@ -171,13 +174,13 @@ class Tiki:
         return parts[1], parts[0] 
 
 
-    def rip_page(self, pdic): #url, page_dir, page_name):
+    def rip_page(self, pdic): 
         
         print "------------page---------------"
         # check dir exists and nuke files within
         h.make_clean_dir(pdic['page_dir'])
         
-        # make some vars for convience
+        # make some local vars for convience
         url = pdic['url']
         page_dir = pdic['page_dir']
         title = pdic['name'].title()
@@ -187,7 +190,7 @@ class Tiki:
         #print "  raw=", url
         #print "  clean=", self.clean_url(url)
         
-        
+        # =====================
         # IGNORES. .for now
         ## TODO detect and clean urls
         if "tiki-browse_gallery.php" in url:
@@ -206,7 +209,7 @@ class Tiki:
         
         ## === Download IMAGES ===
         # Find images in page, and download
-        # Using beautiful soup to discover, maybe do on markdown
+        # use img_lookup for url to alt
         img_lookup = {}
         
         # We use beautiful soup to get all the images in html
@@ -221,14 +224,19 @@ class Tiki:
             img_alt = res['alt']
             img_file = os.path.basename(img_src)
             #print img_file, self.tiki_server + img_src
+            
+            ## its and image to process
             if img_file.startswith("show_image.php"):
                 uu = urlparse.urlparse(img_file)
                 idic = urlparse.parse_qs(uu.query)
                 idss = idic.get("id")
+                
                 if idss:
+                    ## get meta from database
                     imageid = idss[0]
                     db_fn =  self.get_img_db(imageid)
                     if db_fn:
+                        # write out file
                         #print section_dir, db_fn
                         ftitle, fslug, fname = h.parts_from_filename(db_fn)
                         #print ftitle, fslug, fname
@@ -243,9 +251,9 @@ class Tiki:
                 print "  IMG==", img_ki, img_vi
         
 
-        ## Convert html to markdown and save in _raw.md
+        ## Convert html to markdown and save in _raw.md_raw
         md_text = h.html_to_markdown(raw_html)
-        f_path = "%s/_raw.md" % (page_dir)
+        f_path = "%s.md_raw" % (page_dir)
         #print f_path
         h.write_file(f_path, md_text)
         
@@ -307,16 +315,16 @@ class Tiki:
         if tlines[1] != "":
             start_idx = 1
                     
-                    md_stuff = ["# %s" % title, "\n"]
-                    md_stuff.extend(tlines[start_line:])
-                    after_title = "\n".join(md_stuff)
-        #for lidx, line in enumerate(tlines):
+            md_stuff = ["# %s" % title, "\n"]
+            md_stuff.extend(tlines[start_line:])
+            after_title = "\n".join(md_stuff)
+            #for lidx, line in enumerate(tlines):
             ## tiki firs tlines might be faft..
             # so we walk until first lblan line  
             
             # so first line is warpeed markdown.. eg
             print "   lidx=%s" % lidx, line
-        #    if lidx == 0:
+            if lidx == 0:
                 start_line = 0 # start line
                 
                 # and itst starts with a title # = smalees liek a title
@@ -348,19 +356,7 @@ class Tiki:
         #print f_path
         h.write_file(f_path, after_title)
               
-        #for idx, resu in enumerate(results):
-        #raw = unicode(resu) #.decode().encode('utf-8')
-        #print "IMG Lookup =", img_lookup
-        #s = md_raw_text.replace("
-        # process wiki style
-        """
-        out_lines = []
-        for idx, line in enumerate(md_raw_text.split("\n")):
-            #img_tag = "![%s](%s)" % ()
-            if line.startswith("!["): # image at line startswith
-                print "img_rep", line
-                #find_me = "![%s](%s)" % ) 
-        """        
+      
               
         
         
