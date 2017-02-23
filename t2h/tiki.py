@@ -273,7 +273,16 @@ class Tiki:
                         if not os.path.exists(target_out):
                             urllib.urlretrieve(self.tiki_server + img_src, target_out)
                         img_lookup[img_src] = dict(file_name=fname, alt=img_alt)
-                        
+            else:
+                srcc = self.conf['tiki_server'] + img_src
+                ftitle, fslug, fname = h.parts_from_filename(srcc)
+                print srcc
+                print ftitle, fslug, fname
+                target_out = page_dir + "/" + fname
+                if not os.path.exists(target_out):
+                    urllib.urlretrieve(self.tiki_server + img_src, target_out)
+                img_lookup[img_src] = dict(file_name=fname, alt=img_alt)
+
         ## images we found
         if False:
             for img_ki, img_vi in img_lookup.iteritems():
@@ -290,9 +299,9 @@ class Tiki:
 
         ## Rewrite the image tags in markdown
         
-        regex = r"\!\[.*\]\(.*\)" # looking for ![Foo Bar](../someiamage.php?id = 21) in txt
+        regex_img = r"\!\[.*\]\(.*\)" # looking for ![Foo Bar](../someiamage.php?id = 21) in txt
 
-        matches = re.finditer(regex, md_text)
+        matches = re.finditer(regex_img, md_text)
         
         after_image_rewrite = ""
         start = 0
@@ -310,7 +319,7 @@ class Tiki:
             if mimg_url in img_lookup:
                 im = img_lookup[mimg_url]
                 #print "   rewite img", im
-                after_image_rewrite += "![%s](%s)" % (im['file_name'], im['file_name'])
+                after_image_rewrite += "![%s](%s)" % (im['file_name'], im['file_name']) + "\n\n"
             else:
                 after_image_rewrite += snip
             start = match.end()
@@ -337,11 +346,11 @@ class Tiki:
                 
                 #start_idx = 0
                 # replace double header
-                cleaned_header.append("# %s" % title)
+                #cleaned_header.append("# %s" % title)
                 cleaned_header.extend(tlines[2:])
                 
             else:
-                cleaned_header.append("# %s" % title)
+                #cleaned_header.append("# %s" % title)
                 cleaned_header.extend(tlines[1:])
         else:
             print tlines[0:10]
@@ -349,12 +358,21 @@ class Tiki:
 
         # Now walk cleaned and replace --|--
         cleaned = []
+        cleaned.append("---")
+        cleaned.append("title: %s" % title)
+        #cleaned.append("description: %s" % "DESCRIPTION.TODOs")
+        #cleaned.append("tagsd: %s" % "DESCRIPTION.TODOs")
+        cleaned.append("---")
+        cleaned.append("")
+
         for l in cleaned_header:
+
             if l == "---|---":
                 cleaned.append("")
 
             else:
                 cleaned.append(l)
+
 
 
         out_md = "\n".join(cleaned)
