@@ -171,14 +171,22 @@ class Tiki:
         ## Rip out the sections
         sec_idx = []
         for p in sec_menu['pages']:
+
+            # =====================
+            # IGNORES. .for now
+            ## TODO detect and clean urls
+            if "tiki-browse_gallery.php" in p['url']:
+                print "  IGNORE", p['url']
+                continue
+
             ## rip page
             print "  >", p['type'], p['name'], p['url']
-            err = self.rip_page(p)
+            err = self.rip_page(p, v=1)
             if not err :
                 sec_idx.append(p)
-        if len(sec_idx) > 0:
-
-            print "YES", sec_idx
+        #if len(sec_idx) > 0:
+        #
+        #   print "YES", sec_idx
 
         ## make index
         sec_md = ["# Heading", ""]
@@ -203,9 +211,9 @@ class Tiki:
         return parts[1], parts[0] 
 
 
-    def rip_page(self, pdic): 
+    def rip_page(self, pdic, v=0):
         
-        print "------------page---------------"
+
         # check dir exists and nuke files within
         h.make_clean_dir(pdic['page_dir'])
         
@@ -214,17 +222,13 @@ class Tiki:
         page_dir = pdic['page_dir']
         title = pdic['name'].title()
         slug = pdic['slug']
-
-        print "  src=",  slug, page_dir, url
+        print "------------page = %s" % title
+        if v > 1:
+            print "  src=",  slug, page_dir, url
         #print "  raw=", url
         #print "  clean=", self.clean_url(url)
         
-        # =====================
-        # IGNORES. .for now
-        ## TODO detect and clean urls
-        if "tiki-browse_gallery.php" in url:
-            print "  IGNORE", url
-            return
+
         
         
         ## Get remote ?page= with cleaned url
@@ -276,8 +280,8 @@ class Tiki:
             else:
                 srcc = self.conf['tiki_server'] + img_src
                 ftitle, fslug, fname = h.parts_from_filename(srcc)
-                print srcc
-                print ftitle, fslug, fname
+                #print srcc
+                #print ftitle, fslug, fname
                 target_out = page_dir + "/" + fname
                 if not os.path.exists(target_out):
                     urllib.urlretrieve(self.tiki_server + img_src, target_out)
@@ -342,7 +346,7 @@ class Tiki:
         cleaned_header = []
         if tlines[0].startswith("# "):
             if tlines[1] != "": 
-                print "tlines=", tlines[0:3]
+                #print "tlines=", tlines[0:3]
                 
                 #start_idx = 0
                 # replace double header
@@ -371,12 +375,18 @@ class Tiki:
                 s = ""
 
             if l.startswith("##"):
-                print l
+                #print l
                 s = "## " + l[2:].title()
 
             if l.startswith("Created"):
                 s = ""
-                #ssss
+            if l.startswith("by "):
+                s = ""
+
+            if l.startswith("**") and l.endswith("**"):
+                print "l=", l
+                s = "**" + l[2:-2].strip() + "**"
+
             cleaned.append(s)
 
 
