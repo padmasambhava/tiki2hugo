@@ -190,7 +190,7 @@ class Tiki:
             #idx_lst = "<li>%</li>"
         print sec_md
         sec_out = "\n".join(sec_md)
-        fname = sec_menu['section_dir'] + "/index.md"
+        fname = sec_menu['section_dir'] + "/_index.md"
         h.write_file(fname, sec_out)
 
     def parse_md_img(self, md):
@@ -346,12 +346,21 @@ class Tiki:
         else:
             print tlines[0:10]
             paniccc
-            
-        
-        after_title = "\n".join(cleaned_header)
+
+        # Now walk cleaned and replace --|--
+        cleaned = []
+        for l in cleaned_header:
+            if l == "---|---":
+                cleaned.append("")
+
+            else:
+                cleaned.append(l)
+
+
+        out_md = "\n".join(cleaned)
         f_path = "%s/index.md" % (page_dir)
         #print f_path
-        h.write_file(f_path, after_title)
+        h.write_file(f_path, out_md)
               
         return None
               
