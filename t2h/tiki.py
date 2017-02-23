@@ -359,7 +359,7 @@ class Tiki:
         # Now walk cleaned and replace --|--
         cleaned = []
         cleaned.append("---")
-        cleaned.append("title: %s" % title)
+        cleaned.append("title: %s" % title.title())
         #cleaned.append("description: %s" % "DESCRIPTION.TODOs")
         #cleaned.append("tagsd: %s" % "DESCRIPTION.TODOs")
         cleaned.append("---")
