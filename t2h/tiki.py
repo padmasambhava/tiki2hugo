@@ -178,6 +178,12 @@ class Tiki:
             if "tiki-browse_gallery.php" in p['url']:
                 print "  IGNORE", p['url']
                 continue
+            if "tiki-view_events.php" in p['url']:
+                stppp
+            else:
+                ## SKIPPP
+                continue
+
 
             ## rip page
             print "  >", p['type'], p['name'], p['url']

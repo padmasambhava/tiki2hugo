@@ -23,7 +23,7 @@ sp_menu = sub_parsers.add_parser("menu", help="Menu stuff")
 sp_menu.add_argument("-w", dest="write", action="store_false")
 
 ## convert command
-sp_convert = sub_parsers.add_parser("convert", help="Convert stuff")
+sp_convert = sub_parsers.add_parser("pages", help="Convert Pages stuff")
 
 ## Add some standard items 
 for p in [sp_setup, sp_convert, sp_menu]:
@@ -59,7 +59,7 @@ if __name__ == "__main__":
         items = tk.write_menu()
         print items
         
-    if args.command == "convert":
+    if args.command == "pages":
         items = tk.get_menu()
         #print items
         for sec_menu in items:
