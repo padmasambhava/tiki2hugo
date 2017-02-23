@@ -366,13 +366,18 @@ class Tiki:
         cleaned.append("")
 
         for l in cleaned_header:
-
+            s = l
             if l == "---|---":
-                cleaned.append("")
+                s = ""
 
-            else:
-                cleaned.append(l)
+            if l.startswith("##"):
+                print l
+                s = "## " + l[2:].title()
 
+            if l.startswith("Created"):
+                s = ""
+                #ssss
+            cleaned.append(s)
 
 
         out_md = "\n".join(cleaned)
