@@ -181,19 +181,17 @@ class Tiki:
             print "YES", sec_idx
 
         ## make index
-        sec_md = "# Heading"
+        sec_md = ["# Heading", ""]
 
-        idx_lst = []
+        #idx_lst = []
         for ix in sec_idx:
-            lnk = "- %s" % (ix)
-            idx_lst.append(ix)
-        lltt = "<li>%</li>"
-        idx_lst.append()
-
-        for ll in idx_lst:
-            idx_lst = "<li>%s".join(idx_lst)
-        fname = sec_menu['section_dir'] + "index.md"
-        h.write_file(fname, md_idx)
+            lnk = "- [%s](%s/)" % (ix['name'].strip(), ix['slug'])
+            sec_md.append(lnk)
+            #idx_lst = "<li>%</li>"
+        print sec_md
+        sec_out = "\n".join(sec_md)
+        fname = sec_menu['section_dir'] + "/index.md"
+        h.write_file(fname, sec_out)
 
     def parse_md_img(self, md):
         #rint "===", md 
@@ -217,7 +215,7 @@ class Tiki:
         title = pdic['name'].title()
         slug = pdic['slug']
 
-        print "U=",  slug, page_dir, url
+        print "  src=",  slug, page_dir, url
         #print "  raw=", url
         #print "  clean=", self.clean_url(url)
         
@@ -320,7 +318,7 @@ class Tiki:
             
             for groupNum in range(0, len(match.groups())):
                 groupNum = groupNum + 1
-                
+                stoppp
                 print ("Group {groupNum} found at {start}-{end}: {group}".format(groupNum = groupNum, start = match.start(groupNum), end = match.end(groupNum), group = match.group(groupNum)))
        
         after_image_rewrite += md_text[start:]
