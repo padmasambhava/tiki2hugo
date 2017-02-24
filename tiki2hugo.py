@@ -22,11 +22,12 @@ sp_setup = sub_parsers.add_parser("test", help="Check setup")
 sp_menu = sub_parsers.add_parser("menu", help="Menu stuff")
 sp_menu.add_argument("-w", dest="write", action="store_false")
 
-## convert command
+## convert commands
 sp_convert = sub_parsers.add_parser("pages", help="Convert Pages stuff")
+sp_articles = sub_parsers.add_parser("articles", help="Convert Articles")
 
 ## Add some standard items 
-for p in [sp_setup, sp_convert, sp_menu]:
+for p in [sp_setup, sp_convert, sp_menu, sp_articles]:
     p.add_argument("--debug", dest="debug", action="store_false", help="debug")
     p.add_argument("-c", dest="config_file", type=str, help="Convertion config", default="./config.yaml")
     
@@ -67,12 +68,13 @@ if __name__ == "__main__":
             # s#t.rip_page(menu)
             #if len(sec_menu['pages']) > 0:
             tk.rip_section(sec_menu)
-                
-            #print ">", sec_menu['type'], sec_menu['page_name'], sec_menu['url']
-            #for p in sec_menu['pages']:
-            #    print "  >", p['type'], p['page_name'], p['url']
+
                     
-                    
-        
+    if args.command == "articles":
+        arts = tk.get_articles()
+        for idx, a in enumerate(arts):
+            tk.rip_article(a)
+            if idx == 10:
+                sys.exit(0)
         
         

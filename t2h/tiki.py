@@ -147,6 +147,7 @@ class Tiki:
         for r in res:
             return r[1]
         return None
+
     
     def clean_url(self, url):
         p = urlparse.urlparse(url)
@@ -405,6 +406,43 @@ class Tiki:
               
         
         
-        
-        
-        
+
+    def get_articles(self):
+        sql = "select articleid, topline, title, subtitle "
+        sql += " from tiki_articles "
+        sql += " order by articleid desc"
+        res = self.session.execute(sql)
+        l = []
+        for r in res:
+            print r
+            l.append( dict(articleid=r[0], topline=r[1], title=r[2], subtitle=r[3]))
+        return l
+
+    def rip_article(self, adic):
+
+        # check dir exists and nuke files within
+        #h.make_clean_dir(pdic['page_dir'])
+
+        # make some local vars for convience
+        url = self.conf['tiki_server'] + "/tiki-print_article.php?articleId=%s" % adic['articleid']
+        print url
+
+        page_dir = "articles"
+
+
+        ## Get remote ?page= with cleaned url
+        resp = urllib2.urlopen(self.clean_url(url))
+
+        ## the raw html is here and save to file and in utf8
+        t_dir = "%s/content/articles/%s/" % (self.hugo_dir, adic['articleid'])
+        h.make_clean_dir(t_dir)
+        raw_stuff = resp.read()
+        raw_html = unicode(raw_stuff, "utf-8")
+        h.write_file("%s/_source.txt" % (t_dir), raw_html)
+
+        ## Convert html to markdown and save in _raw.md_raw
+        md_text = h.html_to_markdown(raw_html)
+        f_path = "%s/_md.raw" % (page_dir)
+        h.write_file("%s/_md.raw" % (t_dir), md_text)
+
+        h.write_file("%s/index.md" % (t_dir), md_text)
