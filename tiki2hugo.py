@@ -67,7 +67,7 @@ if __name__ == "__main__":
             
             # s#t.rip_page(menu)
             #if len(sec_menu['pages']) > 0:
-            tk.rip_section(sec_menu)
+            tk.rip_menu_section(sec_menu)
 
                     
     if args.command == "articles":

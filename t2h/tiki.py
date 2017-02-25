@@ -22,11 +22,12 @@ Conf = None
 Engine = None
 Db = None
 
+"""
 class PMeta:
     def __init__(self, url=None, page=None):
         self.url = url
         self.page = page
-
+"""
 
 class Tiki:
     
@@ -164,7 +165,7 @@ class Tiki:
         return url
         #ok = self.rip_page(u, page_dir, page_name)
                     
-    def rip_section(self, sec_menu):
+    def rip_menu_section(self, sec_menu):
         """Rips out a section meniw" annd all pages"""
         print "== SECTION = > %s" % sec_menu['name'], sec_menu['section_dir']
         h.make_clean_dir(sec_menu['section_dir'])
@@ -180,15 +181,17 @@ class Tiki:
                 print "  IGNORE", p['url']
                 continue
             if "tiki-view_events.php" in p['url']:
-                stppp
-            else:
-                ## SKIPPP
+                print "  IGNORE", p['url']
                 continue
+                #else:
+                ## SKIPPP
+                #continue
+
 
 
             ## rip page
             print "  >", p['type'], p['name'], p['url']
-            err = self.rip_page(p, v=1)
+            err = self.rip_tiki_page(p, v=1)
             if not err :
                 sec_idx.append(p)
         #if len(sec_idx) > 0:
@@ -217,8 +220,106 @@ class Tiki:
         #print s, parts
         return parts[1], parts[0] 
 
+    def process_images(self, page_dir, raw_html):
+        ## === Download IMAGES ===
+        # Find images in page, and download
+        # use img_lookup for url to alt
+        img_lookup = {}
 
-    def rip_page(self, pdic, v=0):
+        # We use beautiful soup to get all the images in html
+        soup = bs4.BeautifulSoup(raw_html, "lxml")
+        image_nodes = soup.find_all("img")
+
+        # print results
+        # images = {}
+
+        for res in image_nodes:
+            img_src = res['src']
+            img_alt = res.get('alt')
+            img_file = os.path.basename(img_src)
+            # print img_file, self.tiki_server + img_src
+
+            ## its and image to process
+            if img_file.startswith("show_image.php"):
+                uu = urlparse.urlparse(img_file)
+                idic = urlparse.parse_qs(uu.query)
+                idss = idic.get("id")
+
+                if idss:
+                    ## get meta from database
+                    imageid = idss[0]
+                    db_fn = self.get_img_db(imageid)
+                    if db_fn:
+                        # write out file
+                        # print section_dir, db_fn
+                        ftitle, fslug, fname = h.parts_from_filename(db_fn)
+                        # print ftitle, fslug, fname
+                        target_out = page_dir + "/" + fname
+                        if not os.path.exists(target_out):
+                            urllib.urlretrieve(self.tiki_server + img_src, target_out)
+                        img_lookup[img_src] = dict(file_name=fname, alt=img_alt)
+            else:
+                srcc = self.conf['tiki_server'] + img_src
+                ftitle, fslug, fname = h.parts_from_filename(srcc)
+                # print srcc
+                # print ftitle, fslug, fname
+                target_out = page_dir + "/" + fname
+                if not os.path.exists(target_out):
+                    urllib.urlretrieve(self.tiki_server + img_src, target_out)
+                img_lookup[img_src] = dict(file_name=fname, alt=img_alt)
+
+        ## images we found
+        if False:
+            for img_ki, img_vi in img_lookup.iteritems():
+                print "  IMG==", img_ki, img_vi
+
+        ## Convert html to markdown and save in _raw.md_raw
+        md_text = h.html_to_markdown(raw_html)
+        #f_path = "%s/_md.raw" % (page_dir)
+        #h.write_file("%s/_md.raw" % (page_dir), md_text)
+        # print f_path
+        # .write_file(f_path, md_text)
+
+
+        ## Rewrite the image tags in markdown
+
+        regex_img = r"\!\[.*\]\(.*\)"  # looking for ![Foo Bar](../someiamage.php?id = 21) in txt
+
+        matches = re.finditer(regex_img, md_text)
+
+        after_image_rewrite = ""
+        start = 0
+
+        for matchNum, match in enumerate(matches):
+            matchNum = matchNum + 1
+
+            # print ("m:{matchNum} at {start}-{end}: {match}".format(matchNum = matchNum, start = match.start(), end = match.end(), match = match.group()))
+
+            after_image_rewrite += md_text[start:match.start()]
+            # out += md_text[match.start():match.end()]
+            snip = md_text[match.start():match.end()]
+            mimg_url, mimg_alt = self.parse_md_img(snip)
+            #
+            if mimg_url in img_lookup:
+                im = img_lookup[mimg_url]
+                # print "   rewite img", im
+                after_image_rewrite += "![%s](%s)" % (im['file_name'], im['file_name']) + "\n\n"
+            else:
+                after_image_rewrite += snip
+            start = match.end()
+
+            for groupNum in range(0, len(match.groups())):
+                groupNum = groupNum + 1
+                stoppp
+                print ("Group {groupNum} found at {start}-{end}: {group}".format(groupNum=groupNum,
+                                                                                 start=match.start(groupNum),
+                                                                                 end=match.end(groupNum),
+                                                                                 group=match.group(groupNum)))
+
+        after_image_rewrite += md_text[start:]
+        return after_image_rewrite
+
+    def rip_tiki_page(self, pdic, v=0):
         
 
         # check dir exists and nuke files within
@@ -237,7 +338,6 @@ class Tiki:
         
 
         
-        
         ## Get remote ?page= with cleaned url
         resp = urllib2.urlopen(self.clean_url(url))
         
@@ -247,102 +347,7 @@ class Tiki:
         h.write_file("%s/_source.txt" % (page_dir), raw_html)
         
         
-        ## === Download IMAGES ===
-        # Find images in page, and download
-        # use img_lookup for url to alt
-        img_lookup = {}
-        
-        # We use beautiful soup to get all the images in html
-        soup = bs4.BeautifulSoup(raw_html, "lxml")
-        image_nodes = soup.find_all("img")
-        
-        #print results
-        #images = {}
-        
-        for res in image_nodes:
-            img_src = res['src']
-            img_alt = res.get('alt')
-            img_file = os.path.basename(img_src)
-            #print img_file, self.tiki_server + img_src
-            
-            ## its and image to process
-            if img_file.startswith("show_image.php"):
-                uu = urlparse.urlparse(img_file)
-                idic = urlparse.parse_qs(uu.query)
-                idss = idic.get("id")
-                
-                if idss:
-                    ## get meta from database
-                    imageid = idss[0]
-                    db_fn =  self.get_img_db(imageid)
-                    if db_fn:
-                        # write out file
-                        #print section_dir, db_fn
-                        ftitle, fslug, fname = h.parts_from_filename(db_fn)
-                        #print ftitle, fslug, fname
-                        target_out = page_dir + "/" + fname
-                        if not os.path.exists(target_out):
-                            urllib.urlretrieve(self.tiki_server + img_src, target_out)
-                        img_lookup[img_src] = dict(file_name=fname, alt=img_alt)
-            else:
-                srcc = self.conf['tiki_server'] + img_src
-                ftitle, fslug, fname = h.parts_from_filename(srcc)
-                #print srcc
-                #print ftitle, fslug, fname
-                target_out = page_dir + "/" + fname
-                if not os.path.exists(target_out):
-                    urllib.urlretrieve(self.tiki_server + img_src, target_out)
-                img_lookup[img_src] = dict(file_name=fname, alt=img_alt)
-
-        ## images we found
-        if False:
-            for img_ki, img_vi in img_lookup.iteritems():
-                print "  IMG==", img_ki, img_vi
-        
-
-        ## Convert html to markdown and save in _raw.md_raw
-        md_text = h.html_to_markdown(raw_html)
-        f_path = "%s/_md.raw" % (page_dir)
-        h.write_file("%s/_md.raw" % (page_dir), md_text)
-        #print f_path
-        #.write_file(f_path, md_text)
-        
-
-        ## Rewrite the image tags in markdown
-        
-        regex_img = r"\!\[.*\]\(.*\)" # looking for ![Foo Bar](../someiamage.php?id = 21) in txt
-
-        matches = re.finditer(regex_img, md_text)
-        
-        after_image_rewrite = ""
-        start = 0
-
-        for matchNum, match in enumerate(matches):
-            matchNum = matchNum + 1
-            
-            #print ("m:{matchNum} at {start}-{end}: {match}".format(matchNum = matchNum, start = match.start(), end = match.end(), match = match.group()))
-            
-            after_image_rewrite += md_text[start:match.start()]
-            #out += md_text[match.start():match.end()]
-            snip = md_text[match.start():match.end()]
-            mimg_url, mimg_alt = self.parse_md_img(snip)
-            #
-            if mimg_url in img_lookup:
-                im = img_lookup[mimg_url]
-                #print "   rewite img", im
-                after_image_rewrite += "![%s](%s)" % (im['file_name'], im['file_name']) + "\n\n"
-            else:
-                after_image_rewrite += snip
-            start = match.end()
-            
-            
-            for groupNum in range(0, len(match.groups())):
-                groupNum = groupNum + 1
-                stoppp
-                print ("Group {groupNum} found at {start}-{end}: {group}".format(groupNum = groupNum, start = match.start(groupNum), end = match.end(groupNum), group = match.group(groupNum)))
-       
-        after_image_rewrite += md_text[start:]
-        
+        after_image_rewrite = self.process_images(page_dir, raw_html)
         # Phew now images have been rewitten,
         # we start again with out raw_stuff for hugo
         
@@ -408,14 +413,20 @@ class Tiki:
         
 
     def get_articles(self):
-        sql = "select articleid, topline, title, subtitle "
+        sql = "select articleid, topline, title, subtitle, heading, "
+        sql += "useimage, image_name, image_caption, image_x, image_y "
         sql += " from tiki_articles "
         sql += " order by articleid desc"
+        sql += " limit 10"
         res = self.session.execute(sql)
         l = []
         for r in res:
-            print r
-            l.append( dict(articleid=r[0], topline=r[1], title=r[2], subtitle=r[3]))
+            dd = dict(articleid=r[0], topline=r[1], title=r[2], subtitle=r[3],
+                      heading=r[4], use_image=r[5], image_name=r[6], image_caption=r[7],
+                      image_x=r[8], image_y=r[9]
+                      )
+            ##print dd
+            l.append( dd )
         return l
 
     def rip_article(self, adic):
