@@ -14,6 +14,7 @@ from sqlalchemy.orm import sessionmaker
 
 import bs4
 from slugify import slugify
+from PIL import Image
 
 
 import helpers as h
@@ -149,7 +150,18 @@ class Tiki:
             return r[1]
         return None
 
-    
+    def get_img_article_db(self, idd):
+        sql = "select articleid, "
+        sql += "useimage, image_name, image_caption, image_x, image_y "
+        sql += " from tiki_articles "
+        sql += ' where articleid = %s' % idd
+        res = self.session.execute(sql)
+        for r in res:
+            return dict(articleid=r[0], use_image=r[1], image_name=r[2], image_caption=r[3],
+                      image_x=r[4], image_y=r[4]
+                      )
+        return None
+
     def clean_url(self, url):
         p = urlparse.urlparse(url)
         qdic = urlparse.parse_qs(p.query)
@@ -258,6 +270,27 @@ class Tiki:
                         if not os.path.exists(target_out):
                             urllib.urlretrieve(self.tiki_server + img_src, target_out)
                         img_lookup[img_src] = dict(file_name=fname, alt=img_alt)
+                else:
+                    panic
+
+            elif img_file.startswith("article_image.php"):
+                uu = urlparse.urlparse(img_file)
+                idic = urlparse.parse_qs(uu.query)
+                idss = idic.get("id")
+                imageid = idss[0]
+                db_data = self.get_img_article_db(imageid)
+                print "db_data=", db_data
+                fname = db_data['image_name']
+                target_out = page_dir + "/" + fname
+                if not os.path.exists(target_out):
+                    tmpp = target_out + ".temp"
+                    urllib.urlretrieve(self.tiki_server + img_src, tmpp)
+                    img = Image.open(tmpp)
+                    siz = (db_data['image_x'], db_data['image_y'])
+                    img = img.resize(siz, Image.ANTIALIAS)
+                    img.save(target_out)
+                img_lookup[img_src] = dict(file_name=fname, alt=img_alt)
+
             else:
                 srcc = self.conf['tiki_server'] + img_src
                 ftitle, fslug, fname = h.parts_from_filename(srcc)
@@ -275,8 +308,8 @@ class Tiki:
 
         ## Convert html to markdown and save in _raw.md_raw
         md_text = h.html_to_markdown(raw_html)
-        #f_path = "%s/_md.raw" % (page_dir)
-        #h.write_file("%s/_md.raw" % (page_dir), md_text)
+        #f_path = "%s/__md.raw" % (page_dir)
+        h.write_file("%s/__md.raw" % (page_dir), md_text)
         # print f_path
         # .write_file(f_path, md_text)
 
@@ -335,7 +368,6 @@ class Tiki:
             print "  src=",  slug, page_dir, url
         #print "  raw=", url
         #print "  clean=", self.clean_url(url)
-        
 
         
         ## Get remote ?page= with cleaned url
@@ -451,9 +483,14 @@ class Tiki:
         raw_html = unicode(raw_stuff, "utf-8")
         h.write_file("%s/_source.txt" % (t_dir), raw_html)
 
+        """
+
         ## Convert html to markdown and save in _raw.md_raw
         md_text = h.html_to_markdown(raw_html)
         f_path = "%s/_md.raw" % (page_dir)
         h.write_file("%s/_md.raw" % (t_dir), md_text)
+        """
+
+        md_text = self.process_images(t_dir, raw_html)
 
         h.write_file("%s/index.md" % (t_dir), md_text)
