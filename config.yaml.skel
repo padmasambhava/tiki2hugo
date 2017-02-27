@@ -1,8 +1,9 @@
-tiki_server: http://example.com/twiki/
-tiki_db: mysql://root:god@localhost/mt-tiki-db
+tiki_server: http://server.com/wiki/
+tiki_db: mysql://user:pass@localhost/database
 tiki_main_menu_id: 44
 
-out_base_url: http://TBA/
-hugo_dir: /home/somewhere/a_hugo_site
+out_base_url: http://local.lake/
+hugo_dir: /home/path/a_hugo
+
 
 
