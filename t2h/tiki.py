@@ -279,7 +279,7 @@ class Tiki:
                 idss = idic.get("id")
                 imageid = idss[0]
                 db_data = self.get_img_article_db(imageid)
-                print "db_data=", db_data
+                #print "db_data=", db_data
                 fname = db_data['image_name']
                 target_out = page_dir + "/" + fname
                 if not os.path.exists(target_out):
@@ -444,12 +444,12 @@ class Tiki:
         
         
 
-    def get_articles(self):
+    def get_db_articles(self):
         sql = "select articleid, topline, title, subtitle, heading, "
         sql += "useimage, image_name, image_caption, image_x, image_y "
         sql += " from tiki_articles "
         sql += " order by articleid desc"
-        sql += " limit 10"
+        sql += " limit 100"
         res = self.session.execute(sql)
         l = []
         for r in res:
@@ -468,7 +468,7 @@ class Tiki:
 
         # make some local vars for convience
         url = self.conf['tiki_server'] + "/tiki-print_article.php?articleId=%s" % adic['articleid']
-        print url
+        print "## article= %s" % url
 
         page_dir = "articles"
 

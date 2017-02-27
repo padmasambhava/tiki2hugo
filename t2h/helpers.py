@@ -32,15 +32,23 @@ def html_to_markdown(raw_html):
     h2t.ignore_links = False
     h2t.escape_snob = True
     h2t.unicode_snob = True
+    h2t.body_width = 220
+
     md = h2t.handle( raw_html )
     #print md[0:30]
-    
-    ## mash special to remove trailing spaces
+
+
+
+
     lines = md.split("\n")
+
     ret = []
     for line in lines:
-        ret.append(line.rstrip())
-    return "\n".join(ret)
+        if line.startswith("\\-"):
+            print line
+
+        #ret.append(line.rstrip())
+    return md
 
 
 

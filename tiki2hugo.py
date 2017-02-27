@@ -71,10 +71,10 @@ if __name__ == "__main__":
 
                     
     if args.command == "articles":
-        arts = tk.get_articles()
+        arts = tk.get_db_articles()
         for idx, a in enumerate(arts):
             tk.rip_article(a)
-            if idx == 10:
+            if idx == 100:
                 sys.exit(0)
         
         
