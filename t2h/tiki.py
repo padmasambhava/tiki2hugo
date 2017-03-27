@@ -1,8 +1,8 @@
 
 import os
-import sys
-import glob
-import codecs
+#import sys
+#import glob
+#import codecs
 import re
 
 import urllib
